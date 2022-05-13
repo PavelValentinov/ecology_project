@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Сайт находится на стадии разработки</h1>
+
+  <p>Приносим извинения за доставленные неудобства.<br/>В скором времени сайт заработает!</p>
+
+<h2>Разделы сайта</h2>
+
+  <ul class="sidebar-nav">
+      <li><a href="{% url 'index' %}">Главная</a></li>
+      <li><a href="{% url 'company_selection' %}">Подбор компании</a></li>
+      <li><a href="{% url 'company_verification' %}">Проверка компании</a></li>
+      <li><a href="{% url 'contacts' %}">Контак</a></li>
+  </ul>
+
+{% endblock %}
