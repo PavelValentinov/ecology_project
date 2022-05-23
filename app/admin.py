@@ -1,3 +1,4 @@
 from django.contrib import admin
+from app.models import Company_info
 
-# Register your models here.
+admin.site.register(Company_info)
