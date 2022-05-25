@@ -61,7 +61,7 @@ user_agent_list = [
 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Safari/537.36'
 ]
 
-page = 15
+page = 56
 id = []
 company_info = {}
 fkko_info = {}
@@ -78,7 +78,7 @@ for pagin in soup_pag.find_all(class_='paginationBox__numbers'):
 # начало цикла и работа парсера
 while int(page) < int(pagination_end):
 	# замена headers случайным значением из списка user_agent_list
-	if page % 300 == 0:
+	if page % 200 == 0:
 		user_agent = random.choice(user_agent_list)
 		headers = {'User-Agent': user_agent, 'Accept-Encoding': 'identity'}
 		time.sleep(1)
@@ -93,9 +93,8 @@ while int(page) < int(pagination_end):
 		date_status = info.find_all(class_='sectionRegistry__resultTableContent')[1].get_text(' ', strip=True)
 		d_s = date_status.split()
 
+		# если лицензич компании дествуйющая, записываем в csv
 		if d_s[1] in "Действуюшая":
-			print("действуйющая")
-
 			company_info['id'] = id_company.strip()
 			company_info['№ лицензии'] = info.find_all(class_='sectionRegistry__resultTableContent _medium')[0].get_text(strip=True)
 			company_info['Дата выдачи'] = d_s[0]
@@ -141,74 +140,95 @@ while int(page) < int(pagination_end):
 
 			# функция парсера данных ФККО
 			def parser_fkko(pagination_end_fkko):
-				page_fkko = 1
-				# цикл проходит по всем страницам пагинации
 
-				while int(page_fkko) <= int(pagination_end_fkko):
-					headers_fkko = {
-						'User-Agent': 'Opera/9.80 (Macintosh; Intel Mac OS X; U; en) Presto/2.2.15 Version/10.00',
-						'Accept-Encoding': 'identity'}
+				# проверка на наличие пагинаций на странице ФККО
+				if pagination_end_fkko == 0:
+					fkko_info['id компании'] = new_url_fkko_page
+					fkko_info['id компании'] = None
+					fkko_info['Места осуществления'] = None
+					fkko_info['Код'] = None
+					fkko_info['Наименование'] = None
+					fkko_info['Класс опасности'] = None
+					fkko_info['Вид деятельности'] = None
 
-					if page_fkko % 50 == 0:
-						user_agent = random.choice(user_agent_list)
-						headers_fkko = {'User-Agent': user_agent, 'Accept-Encoding': 'identity'}
-						print(f'User_agent = {headers_fkko}')
-						print(f'page_fkko делиться на 50 = {page_fkko} из {pagination_end_fkko}')
-						time.sleep(1)
-					try:
-						response_fkko_info = requests.get(
-							'https://rpn.gov.ru/licences/fkko.php?id=' + (new_url_fkko_page) + '&pagen=page-' + str(
-								page_fkko),
-							headers=headers_fkko)
-					except:
-						print("Let me sleep for 5 minut")
-						print("ZZzzzz...")
-						time.sleep(300)
-						continue
+					# записываем None и id компании в файл  fkko_info.csv
+					with open('fkko_info220522.csv', 'a', newline='', encoding="utf-8") as file:
+						writer = csv.writer(file)
+						writer.writerow([fkko_info])
 
-					soup_fkko_info = BeautifulSoup(response_fkko_info.text, 'lxml')
+				# если даннные на странице пагинаций, проходим далее по всем страницам
+				else:
+					page_fkko = 1
+					# цикл проходит по всем страницам пагинации
 
-					# удалили заголовок таблицы
-					try:
-						soup_fkko_info.find(class_='_head').decompose()
-					except:
-						continue
+					while int(page_fkko) <= int(pagination_end_fkko):
+						headers_fkko = {
+							'User-Agent': 'Opera/9.80 (Macintosh; Intel Mac OS X; U; en) Presto/2.2.15 Version/10.00',
+							'Accept-Encoding': 'identity'}
 
-					# заполняем новую таблицу с информацией про коды ФККО
-					for info_fkko in soup_fkko_info.find_all(class_='registryCard__itemTableRow'):
+						if page_fkko % 50 == 0:
+							user_agent = random.choice(user_agent_list)
+							headers_fkko = {'User-Agent': user_agent, 'Accept-Encoding': 'identity'}
 
-						# общие данные info_all_fkko
-						info_all_fkko = info_fkko.get_text("@", strip=True)
-
-						fkko_info['id компании'] =  company_info['id']
-						fkko_info['id страницы ФККО'] = new_url_fkko_page
-						fkko_info['Лицензиат'] = adress_lic.split("@")[0]
-						fkko_info['Места осуществления'] = value_locations.strip()
-						fkko_info['Код'] = info_all_fkko.split("@")[0].replace(" ", "")
-
-						# ставим None, если данные парсера пустые
+							print(f'Текущее время = {datetime.now()}')
+							print(f'Остановились на  {page_fkko} из {pagination_end_fkko}')
+							time.sleep(1)
 						try:
-							fkko_info['Наименование'] = info_all_fkko.split("@")[1]
+							response_fkko_info = requests.get(
+								'https://rpn.gov.ru/licences/fkko.php?id=' + (new_url_fkko_page) + '&pagen=page-' + str(
+									page_fkko),
+								headers=headers_fkko)
 						except:
-							fkko_info['Наименование'] = None
+							print(f'ошибка подключения к id {new_url_fkko_page} - пауза 1 секунда')
+							time.sleep(1)
+							continue
 
+						soup_fkko_info = BeautifulSoup(response_fkko_info.text, 'lxml')
+
+						# удалили заголовок таблицы
 						try:
-							fkko_info['Класс опасности'] = info_all_fkko.split("@")[2]
+							soup_fkko_info.find(class_='_head').decompose()
 						except:
-							fkko_info['Класс опасности'] = None
+							print('ошибка c заголовком _head')
+							continue
 
-						try:
-							fkko_info['Вид деятельности'] = info_all_fkko.split("@")[3]
-						except:
-							fkko_info['Вид деятельности'] = None
+						# заполняем новую таблицу с информацией про коды ФККО
+						for info_fkko in soup_fkko_info.find_all(class_='registryCard__itemTableRow'):
 
-						# записываем полученные данные в файл  fkko_info.csv
-						with open('fkko_info220522.csv', 'a', newline='', encoding="utf-8") as file:
-							writer = csv.writer(file)
-							writer.writerow([fkko_info])
-					page_fkko += 1
+							# общие данные info_all_fkko
+							info_all_fkko = info_fkko.get_text("@", strip=True)
+
+							fkko_info['id компании'] =  company_info['id']
+							fkko_info['id страницы ФККО'] = new_url_fkko_page
+							fkko_info['Лицензиат'] = adress_lic.split("@")[0]
+							fkko_info['Места осуществления'] = value_locations.strip()
+							fkko_info['Код'] = info_all_fkko.split("@")[0].replace(" ", "")
+
+							# ставим None, если данные парсера пустые
+							try:
+								fkko_info['Наименование'] = info_all_fkko.split("@")[1]
+							except:
+								fkko_info['Наименование'] = None
+
+							try:
+								fkko_info['Класс опасности'] = info_all_fkko.split("@")[2]
+							except:
+								fkko_info['Класс опасности'] = None
+
+							try:
+								fkko_info['Вид деятельности'] = info_all_fkko.split("@")[3]
+							except:
+								fkko_info['Вид деятельности'] = None
+
+							# записываем полученные данные в файл  fkko_info.csv
+							with open('fkko_info220522.csv', 'a', newline='', encoding="utf-8") as file:
+								writer = csv.writer(file)
+								writer.writerow([fkko_info])
+						page_fkko += 1
+
+		# если лицензия компании недействующая, то пропускать ее
 		else:
-			pass
+			continue
 
 		try:
 			# Переходим на страницу с подробным описанием о компании
@@ -218,8 +238,16 @@ while int(page) < int(pagination_end):
 				response_fkko_info_pag = requests.get(
 					'https://rpn.gov.ru/licences/fkko.php?id=' + (new_url_fkko_page), headers=headers)
 				soup_fkko_info_pag = BeautifulSoup(response_fkko_info_pag.text, 'lxml')
-				for pagin_fkko in soup_fkko_info_pag.find_all(class_='paginationBox__numbers'):
-					pagination_end_fkko = pagin_fkko.find_all(class_='paginationBox__number')[-1].get_text(strip=True)
+
+				# если нет пагинации и 'нет данных' на странице, то pagination_end_fkko присваиваем 0
+				if soup_fkko_info_pag.text in '<html><body><div class="registryCard__itemDescription">Нет данных</div></body></html>':
+					pagination_end_fkko = 0
+
+				# 	иначе запускаем поиск на последней пагинации
+				else:
+					for pagin_fkko in soup_fkko_info_pag.find_all(class_='paginationBox__numbers'):
+						pagination_end_fkko = pagin_fkko.find_all(class_='paginationBox__number')[-1].get_text(
+							strip=True)
 
 				# запуск функции парсера
 				parser_fkko(pagination_end_fkko)
@@ -228,6 +256,7 @@ while int(page) < int(pagination_end):
 				writer = csv.writer(file)
 				writer.writerow([company_info])
 		except:
+			print("Ошибка - нет подробного описания")
 			pass
 
 	page += 1
